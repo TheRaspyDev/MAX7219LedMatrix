@@ -28,7 +28,7 @@ public:
     /**
      * Constructor.
      * numberOfDisplays: number of connected devices
-     * slaveSelectPin: CS (or SS) pin connected to your ESP8266
+     * slaveSelectPin: CS (or SS) pin
      */
     LedMatrix(byte numberOfDisplays, byte slaveSelectPin);
     
@@ -70,6 +70,11 @@ public:
      * Turn on pixel at position (x,y).
      */
     void setPixel(byte x, byte y);
+
+    /**
+     * Print a custom 8x8 character at position x. Data has to array of 8 bytes
+     */
+    void setCustomChar(byte x,byte width,byte *data);
     
     /**
      * Clear the frame buffer.
@@ -116,11 +121,15 @@ public:
      * Oscilate the text between the two limits.
      */
     void oscillateText();
-    
+
+    /**
+     * Set rotated characters (for those displays where the Matrix is rotated by 90 Deg...)
+     */
+    void setRotate(bool rot);
+
 private:
     byte* cols;
-    byte spiregister[8];
-    byte spidata[8];
+    uint16_t  *spitransfer; //Could save a few bytes here by making this dynamically allocated but that sounds like overkill
     String myText;
     String myNextText;
     int myTextOffset = 1;
@@ -128,8 +137,10 @@ private:
     int increment = -1;
     byte myNumberOfDevices = 0;
     byte mySlaveSelectPin = 0;
-    byte myCharWidth = 7;
+    byte myCharWidth = 8;
     byte myTextAlignment = 1;
+    bool rotate = false;
     
     void calculateTextAlignmentOffset();
+    void sendAllBytes (void);
 };
