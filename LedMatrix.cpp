@@ -96,6 +96,7 @@ void LedMatrix::setTextAlignment(byte textAlignment)
     calculateTextAlignmentOffset();
 }
 
+
 void LedMatrix::calculateTextAlignmentOffset() 
 {
     switch(myTextAlignment) 
@@ -107,10 +108,10 @@ void LedMatrix::calculateTextAlignmentOffset()
             myTextAlignmentOffset = myNumberOfDevices * 8;
             break;
         case TEXT_ALIGN_RIGHT:
-            myTextAlignmentOffset = myText.length() * myCharWidth - myNumberOfDevices * 8;
+            myTextAlignmentOffset = getTextLength(myText) * myCharWidth - myNumberOfDevices * 8;
             break;
         case TEXT_ALIGN_RIGHT_END:
-            myTextAlignmentOffset = - myText.length() * myCharWidth;
+            myTextAlignmentOffset = - getTextLength(myText) * myCharWidth;
             break;
     }
     
@@ -129,10 +130,16 @@ void LedMatrix::commit()
     sendAllBytes();
 }
 
+#ifdef USE_STRINGS
+int LedMatrix::getTextLength(String txt)
+{
+    return txt.length();
+}
+
 void LedMatrix::setText(String text) 
 {
     myText = text;
-    myTextOffset = 0;
+    myTextOffset = 1;
     calculateTextAlignmentOffset();
 }
 
@@ -140,36 +147,61 @@ void LedMatrix::setNextText(String nextText)
 {
     myNextText = nextText;
 }
+#else
+int LedMatrix::getTextLength(char* txt)
+{
+    if (txt == NULL)
+        return 0;
+    else    
+        return strlen(txt);
+}
+
+void LedMatrix::setText(char* text) 
+{
+    myText = text;
+    myTextOffset = 1;
+    calculateTextAlignmentOffset();
+}
+
+void LedMatrix::setNextText(char* nextText) 
+{
+    myNextText = nextText;
+}
+#endif
 
 void LedMatrix::scrollTextRight() 
 {
-    myTextOffset = (myTextOffset + 1) % ((int)myText.length() * myCharWidth - 5);
+    myTextOffset = (myTextOffset + 1) % ((int)getTextLength(myText) * myCharWidth - 5);
 }
 
 void LedMatrix::scrollTextLeft() 
 {
-    myTextOffset = (myTextOffset - 1) % ((int)myText.length() * myCharWidth + myNumberOfDevices * 8);
-    if (myTextOffset == 0 && myNextText.length() > 0) 
+    myTextOffset = (myTextOffset - 1) % ((int)getTextLength(myText) * myCharWidth + myNumberOfDevices * 8);
+    if (myTextOffset == 0 && getTextLength(myNextText) > 0) 
     {
         myText = myNextText;
+#ifdef USE_STRINGS        
         myNextText = "";
+#else
+        myNextText = NULL;
+#endif
         calculateTextAlignmentOffset();
     }
 }
 
 void LedMatrix::oscillateText() 
 {
-    int maxColumns = (int)myText.length() * myCharWidth;
+    int maxColumns = (int)getTextLength(myText) * myCharWidth;
     int maxDisplayColumns = myNumberOfDevices * 8;
     if (maxDisplayColumns > maxColumns) 
     {
         return;
     }
-    if (myTextOffset - maxDisplayColumns == -maxColumns) 
+    if (myTextOffset - maxDisplayColumns <= -maxColumns) 
     {
         increment = 1;
     }
-    if (myTextOffset == 0) 
+    if (myTextOffset >= 0) 
     {
         increment = -1;
     }
@@ -181,18 +213,21 @@ void LedMatrix::drawText()
     char letter;
     int position = 0;
     unsigned char coldata;
-    for (int i = 0; i < (int)myText.length(); i++) 
+    for (int i = 0; i < (int)getTextLength(myText); i++) 
     {
+#ifdef USE_STRINGS        
         letter = myText.charAt(i);
+#else
+        letter = myText[i];
+#endif
         for (byte col = 0; col < myCharWidth; col++) 
         {
-            position = (i * myCharWidth) + col + myTextOffset + myTextAlignmentOffset;
+            position = (i * myCharWidth) + col + myTextOffset + myTextAlignmentOffset ;
             if ((position >= 0) && (position < (myNumberOfDevices * 8))) 
             {
                 if (rotate)
                 {
                     unsigned char colinfo[8];
-                    coldata = 0;
                     byte ii;
 
                     //This is ugly... But the only alternative is a charset that is already pre-rotated....
@@ -236,7 +271,6 @@ void LedMatrix::setCustomChar(byte x,byte width,byte *data)
             if (rotate)
             {
                 unsigned char colinfo[width];
-                coldata = 0;
                 byte ii;
 
                 //And again..This is ugly...

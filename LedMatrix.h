@@ -1,5 +1,13 @@
 #include <Arduino.h>
 
+//Strings are evil. Especially on an Arduino.
+//But if you insist...
+//#define USE_STRINGS
+
+//Some comments about using only c-style char array strings
+//- Library is only using pointer references, make sure string memory stays valid for mulitple frames (Global buffer)
+//- No checks for NULL-pointers or buffer overflows.... Make Sure strings are there and zero-terminated...
+
 // max7219 registers
 #define MAX7219_REG_NOOP         0x0
 #define MAX7219_REG_DIGIT0       0x1
@@ -89,14 +97,20 @@ public:
     /**
      * Set the current text.
      */
+#ifdef USE_STRINGS    
     void setText(String text);
-    
+#else
+    void setText(char* text);
+#endif
     /**
      * Set the text that will replace the current text after a complete scroll
      * cycle.
      */
+#ifdef USE_STRINGS    
     void setNextText(String nextText);
-    
+#else
+    void setNextText(char*  nextText);
+#endif
     /**
      * Set a specific column with a byte value to the framebuffer.
      */
@@ -130,9 +144,14 @@ public:
 private:
     byte* cols;
     uint16_t  *spitransfer; //Could save a few bytes here by making this dynamically allocated but that sounds like overkill
+#ifdef USE_STRINGS  
     String myText;
     String myNextText;
-    int myTextOffset = 1;
+#else
+    char* myText;
+    char* myNextText;
+#endif
+    int myTextOffset = 0;
     int myTextAlignmentOffset = 0;
     int increment = -1;
     byte myNumberOfDevices = 0;
@@ -143,4 +162,10 @@ private:
     
     void calculateTextAlignmentOffset();
     void sendAllBytes (void);
+
+#ifdef USE_STRINGS  
+    int getTextLength(String txt);
+#else
+    int getTextLength(char* txt);
+#endif
 };
